@@ -1,0 +1,233 @@
+/**
+ * assignInvoiceNumbers_ExactMatch
+ *
+ * Exact-match invoice numbering:
+ * - Matches masterData column "SME Name" (exact text) to program sheet column "SME Name / Company Name".
+ * - Finds Prev invoice number = MAX numeric from program sheet column "Invoice Number".
+ * - For each SME present in program sheet, assigns sequential invoices to its master rows
+ *   in the order they appear in master sheet, skipping any master rows for SMEs not found in program sheet.
+ *
+ * NOTES:
+ * - No normalization is performed. Matching is exact string equality.
+ * - Change MASTER_SHEET_ID / PROGRAM_SHEET_ID if needed.
+ * - Default behavior: do NOT overwrite existing invoice numbers (forceOverwrite = false).
+ */
+
+function assignInvoiceNumbers_ExactMatch() {
+  const MASTER_SHEET_ID = '1_1tlqa3ijeIpsbULs32yJYH1sZDOYTUnX2lOYBUzjX8'; // master invoice tracker file id
+  const PROGRAM_SHEET_ID = '1FOvlu2g4q2h1JaYSVgO9cmRMDCQyjKGTLsvk21o8e9M'; // program sheet file id
+
+  const MASTER_SHEET_NAME = 'master data';
+  const PROGRAM_SHEET_NAME = 'Master Sheet(FY25-26)';
+
+  const forceOverwrite = false; // set true to overwrite existing invoice numbers
+  const monthFilter = null; // e.g. "October 2025" or null to process all months
+
+  // Header names expected in master sheet
+  const MASTER_HEADER_MONTH = 'Month';
+  const MASTER_HEADER_SME = 'SME Name';
+  const MASTER_HEADER_INVOICE = 'invoice number'; // target column (column H in your description)
+  const MASTER_HEADER_AUDIT = 'Invoice Audit (ProgramRow_INV3)';
+
+  // Header names expected in program sheet
+  const PROGRAM_HEADER_INVOICE = 'Invoice Number'; // column B
+  const PROGRAM_HEADER_SME = 'SME Name / Company Name'; // column C
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    // Open spreadsheets and sheets
+    const masterSs = SpreadsheetApp.openById(MASTER_SHEET_ID);
+    const masterSheet = masterSs.getSheetByName(MASTER_SHEET_NAME);
+    if (!masterSheet) throw new Error('Master sheet not found: ' + MASTER_SHEET_NAME);
+
+    const programSs = SpreadsheetApp.openById(PROGRAM_SHEET_ID);
+    const programSheet = programSs.getSheetByName(PROGRAM_SHEET_NAME);
+    if (!programSheet) throw new Error('Program sheet not found: ' + PROGRAM_SHEET_NAME);
+
+    // Read full ranges
+    const masterRange = masterSheet.getDataRange();
+    const masterValues = masterRange.getValues(); // includes header row
+    if (masterValues.length <= 1) {
+      Logger.log('No data rows in master sheet.');
+      return;
+    }
+    const masterHeader = masterValues[0];
+    const masterRows = masterValues.slice(1); // data rows
+
+    const programRange = programSheet.getDataRange();
+    const programValues = programRange.getValues();
+    if (programValues.length <= 1) {
+      Logger.log('No data rows in program sheet.');
+      // If program has no data, nothing to match -> exit
+      return;
+    }
+    const programHeader = programValues[0];
+    const programRows = programValues.slice(1);
+
+    // Find column indexes in master header (0-based)
+    const colMonthIndex = masterHeader.indexOf(MASTER_HEADER_MONTH);
+    const colSmeIndex = masterHeader.indexOf(MASTER_HEADER_SME);
+    let colInvoiceIndex = masterHeader.indexOf(MASTER_HEADER_INVOICE);
+    const colAuditIndex = masterHeader.indexOf(MASTER_HEADER_AUDIT);
+
+    // Fallback to assumed indices if header names vary or not found:
+    // As per your initial spec: A: Month (index 0), B: SME Name (index 1), H: invoice number (index 7)
+    if (colMonthIndex === -1) {
+      // it's optional to have month column; but we'll keep null if not found
+      Logger.log('Master header "' + MASTER_HEADER_MONTH + '" not found. Month filtering disabled.');
+    }
+    if (colSmeIndex === -1) {
+      // try fallback index 1 (B)
+      Logger.log('Master header "' + MASTER_HEADER_SME + '" not found by name. Trying fallback column B (index 1).');
+      colSmeIndex = 1;
+    }
+    if (colInvoiceIndex === -1) {
+      Logger.log('Master header "' + MASTER_HEADER_INVOICE + '" not found by name. Falling back to column H (index 7).');
+      colInvoiceIndex = 7;
+    }
+
+    // Program sheet column indexes (0-based)
+    const progColInvoiceIndex = programHeader.indexOf(PROGRAM_HEADER_INVOICE);
+    let progColSmeIndex = programHeader.indexOf(PROGRAM_HEADER_SME);
+    if (progColSmeIndex === -1) {
+      Logger.log('Program header "' + PROGRAM_HEADER_SME + '" not found by name. Trying fallback column C (index 2).');
+      progColSmeIndex = 2;
+    }
+    if (progColInvoiceIndex === -1) {
+      Logger.log('Program header "' + PROGRAM_HEADER_INVOICE + '" not found by name. Trying fallback column B (index 1).');
+    }
+    const progInvoiceIdx = progColInvoiceIndex === -1 ? 1 : progColInvoiceIndex; // fallback to column B
+    const progSmeIdx = progColSmeIndex; // already set with fallback to 2 if header not found
+
+    // Build prevMaxInvoice map from program sheet (exact match keys)
+    // key = exact program SME name (as-is), value = max numeric invoice number found
+    const prevMaxInvoice = {}; // { "Exact SME Name": maxNumber }
+    const matchedProgramRows = {}; // for audit: SME -> [sheetRowNumbers]
+
+    for (let i = 0; i < programRows.length; i++) {
+      const r = programRows[i];
+      const rawName = r[progSmeIdx];
+      if (rawName === '' || rawName === null || rawName === undefined) continue;
+      const key = String(rawName); // exact string (no normalization)
+      const rawInv = r[progInvoiceIdx];
+
+      // parse numeric value from invoice cell (extract digits)
+      let num = 0;
+      if (rawInv !== '' && rawInv !== null && rawInv !== undefined) {
+        const m = String(rawInv).match(/(\d+)/);
+        if (m) {
+          num = parseInt(m[1], 10);
+          if (isNaN(num)) num = 0;
+        }
+      }
+      if (!(key in prevMaxInvoice) || num > prevMaxInvoice[key]) {
+        prevMaxInvoice[key] = num;
+      }
+      if (!matchedProgramRows[key]) matchedProgramRows[key] = [];
+      // record program sheet row number (header + i + 1)
+      matchedProgramRows[key].push(i + 2);
+    }
+
+    // Build groupings of master rows by exact SME name but ONLY for SMEs present in prevMaxInvoice map.
+    // We'll skip master rows whose SME is not present in prevMaxInvoice.
+    const groups = {}; // { "Exact SME Name": [sheetRowNumber, ...] }
+    for (let i = 0; i < masterRows.length; i++) {
+      const row = masterRows[i];
+      const sheetRowNumber = i + 2; // header offset
+      // Month filtering if requested
+      if (monthFilter && colMonthIndex !== -1) {
+        const monthVal = row[colMonthIndex];
+        if (String(monthVal).trim() !== String(monthFilter).trim()) {
+          continue; // skip row not in month filter
+        }
+      }
+      const rawSme = row[colSmeIndex];
+      if (rawSme === '' || rawSme === null || rawSme === undefined) {
+        continue; // skip blank SME name
+      }
+      const key = String(rawSme); // exact
+      if (key in prevMaxInvoice) {
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(sheetRowNumber);
+      } else {
+        // SME not found in program sheet -> skip row (per requirement)
+        // For traceability, we can optionally write an audit message - but by default we do not overwrite audit for skipped rows.
+      }
+    }
+
+    if (Object.keys(groups).length === 0) {
+      Logger.log('No master rows to update (no matching SMEs found in program sheet).');
+      return;
+    }
+
+    // Prepare arrays for batch update
+    const lastRow = masterRange.getLastRow();
+    const lastCol = masterRange.getLastColumn();
+
+    // Prepare a 2D array with current values for the invoice and audit columns so we can modify in-memory and setValues once
+    // We'll build full arrays of size rowsCount x 1 for invoice col and audit col and then write them back
+    const dataRowCount = masterRows.length;
+    const invoiceOut = new Array(dataRowCount);
+    const auditOut = new Array(dataRowCount);
+
+    // Initialize with existing values (so we preserve unchanged cells)
+    for (let i = 0; i < dataRowCount; i++) {
+      const row = masterRows[i];
+      invoiceOut[i] = [row[colInvoiceIndex] === undefined ? '' : row[colInvoiceIndex]];
+      auditOut[i] = [colAuditIndex >= 0 ? (row[colAuditIndex] === undefined ? '' : row[colAuditIndex]) : ''];
+    }
+
+    // Iterate groups and assign sequential invoices starting from prevMax + 1
+    let totalAssigned = 0;
+    for (const key in groups) {
+      const sheetRowsForKey = groups[key]; // array of sheet row numbers (1-based)
+      let nextNum = (prevMaxInvoice[key] || 0) + 1;
+      const programRowRefs = matchedProgramRows[key] || [];
+
+      // assign sequentially in the order they appear in the master sheet (sheetRowsForKey is in increasing order)
+      for (let j = 0; j < sheetRowsForKey.length; j++) {
+        const sheetRow = sheetRowsForKey[j];
+        const zeroBasedIndex = sheetRow - 2; // index into masterRows / invoiceOut arrays
+        const existingInv = invoiceOut[zeroBasedIndex][0];
+
+        if (existingInv && !forceOverwrite) {
+          // skip writing to this row (preserve existing invoice); still advance nextNum? NO — we should NOT use up the sequence for skipped rows.
+          // According to standard policy, skip should not consume sequence numbers.
+          // So we do NOT increment nextNum here.
+          continue;
+        }
+
+        const invString = 'Invoice # ' + nextNum;
+        invoiceOut[zeroBasedIndex][0] = invString;
+
+        // build audit string
+        if (colAuditIndex >= 0) {
+          const auditVal = `MatchedProgramRows:${programRowRefs.join(',') || 'none'}; PrevInv:${prevMaxInvoice[key] || 0}; Assigned:${nextNum}`;
+          auditOut[zeroBasedIndex][0] = auditVal;
+        }
+
+        nextNum++;
+        totalAssigned++;
+      }
+    }
+
+    // Now write the invoiceOut and auditOut arrays back to the sheet in bulk
+    // invoice column range: from row 2 to row (1 + dataRowCount)
+    const invoiceRange = masterSheet.getRange(2, colInvoiceIndex + 1, dataRowCount, 1);
+    invoiceRange.setValues(invoiceOut);
+
+    if (colAuditIndex >= 0) {
+      const auditRange = masterSheet.getRange(2, colAuditIndex + 1, dataRowCount, 1);
+      auditRange.setValues(auditOut);
+    }
+
+    Logger.log(`Invoice assignment complete. Total invoices assigned: ${totalAssigned}.`);
+  } catch (err) {
+    Logger.log('Error in assignInvoiceNumbers_ExactMatch: ' + err.toString());
+    throw err;
+  } finally {
+    try { lock.releaseLock(); } catch (e) { /* ignore release failures */ }
+  }
+}
