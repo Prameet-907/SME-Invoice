@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body{font-family: Arial, sans-serif;padding:12px}
+      select,input{width:100%;padding:8px;margin:8px 0}
+      button{padding:8px 12px}
+    </style>
+  </head>
+  <body>
+    <div>
+      <label for="month">Select Month</label>
+      <select id="month"></select>
+      <div style="text-align:right">
+        <button onclick="createData()">Create</button>
+        <button onclick="google.script.host.close()">Cancel</button>
+      </div>
+      <div id="status" style="margin-top:10px;color:#333"></div>
+    </div>
+
+    <script>
+      function loadMonths() {
+        document.getElementById('status').innerText = 'Loading months...';
+        google.script.run.withSuccessHandler(function(months){
+          const sel = document.getElementById('month');
+          sel.innerHTML = '';
+          if(!months || months.length===0){
+            sel.innerHTML = '<option value="">-- no months found --</option>';
+            document.getElementById('status').innerText = 'No months found in trackers.';
+            return;
+          }
+          months.forEach(m=>{
+            const o = document.createElement('option');
+            o.value = m;
+            o.text = m;
+            sel.appendChild(o);
+          });
+          document.getElementById('status').innerText = '';
+        }).withFailureHandler(function(err){
+          document.getElementById('status').innerText = 'Error loading months: ' + err.message;
+        }).fetchMonthsForUi();
+      }
+
+      function createData(){
+        const month = document.getElementById('month').value;
+        if(!month){ alert('Select a month'); return; }
+        document.getElementById('status').innerText = 'Creating invoice data for ' + month + ' ...';
+        google.script.run.withSuccessHandler(function(res){
+          if(res.status === 'ok'){
+            document.getElementById('status').innerText = 'Done. Rows written: ' + res.written;
+          } else if(res.status === 'empty'){
+            document.getElementById('status').innerText = res.message;
+          } else {
+            document.getElementById('status').innerText = JSON.stringify(res);
+          }
+        }).withFailureHandler(function(err){
+          document.getElementById('status').innerText = 'Error: ' + err.message;
+        }).runCreateInvoice(month);
+      }
+
+      // load months on open
+      loadMonths();
+    </script>
+  </body>
+</html>
