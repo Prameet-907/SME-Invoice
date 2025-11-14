@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coding Ninjas - Instructor Invoice Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F9FAFB;
+      color: #1F2937;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header */
+    header {
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 24px 0;
+      margin-bottom: 32px;
+    }
+
+    .header-content {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-box {
+      width: 48px;
+      height: 48px;
+      background: #F68B21;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+    }
+
+    .header-text h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1F2937;
+      margin-bottom: 4px;
+    }
+
+    .header-text p {
+      font-size: 14px;
+      color: #6B7280;
+    }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1F2937;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-description {
+      font-size: 14px;
+      color: #6B7280;
+    }
+
+    /* Welcome Banner */
+    .welcome-banner {
+      background: linear-gradient(to right, #F68B21, #e57a13);
+      color: white;
+      padding: 24px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .welcome-avatar {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .welcome-text h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .welcome-text p {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1F2937;
+      margin-bottom: 8px;
+    }
+
+    .required {
+      color: #EF4444;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: #F68B21;
+      box-shadow: 0 0 0 3px rgba(246, 139, 33, 0.1);
+    }
+
+    input.error,
+    select.error {
+      border-color: #EF4444;
+    }
+
+    .helper-text {
+      font-size: 13px;
+      color: #6B7280;
+      margin-top: 4px;
+    }
+
+    .error-text {
+      font-size: 13px;
+      color: #EF4444;
+      margin-top: 4px;
+    }
+
+    /* Global Month Selector */
+    .global-month-section {
+      background: #f0f9ff;
+      border: 2px solid #0ea5e9;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    .global-month-section h3 {
+      color: #0369a1;
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Role Grid */
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .role-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      transition: all 0.2s;
+    }
+
+    .role-card:hover {
+      border-color: #F68B21;
+      box-shadow: 0 4px 6px rgba(246, 139, 33, 0.1);
+    }
+
+    .role-card.has-file {
+      border-color: #10B981;
+      background: rgba(16, 185, 129, 0.02);
+    }
+
+    .role-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .role-name {
+      font-weight: 600;
+      color: #1F2937;
+      font-size: 15px;
+    }
+
+    .role-badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .role-badge.predefined {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* File Upload */
+    .file-upload-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 6px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .file-upload-zone:hover {
+      border-color: #F68B21;
+      background: #fef3e7;
+    }
+
+    .file-upload-zone.dragging {
+      border-color: #F68B21;
+      background: rgba(246, 139, 33, 0.05);
+    }
+
+    .file-upload-zone.error {
+      border-color: #EF4444;
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .file-upload-zone.has-file {
+      border-color: #10B981;
+      background: rgba(16, 185, 129, 0.05);
+      border-style: solid;
+    }
+
+    .upload-icon {
+      font-size: 32px;
+      color: #6B7280;
+      margin-bottom: 8px;
+    }
+
+    .file-upload-zone.has-file .upload-icon {
+      color: #10B981;
+    }
+
+    .upload-text {
+      font-size: 13px;
+      color: #1F2937;
+      margin-bottom: 4px;
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: #6B7280;
+    }
+
+    .file-name-display {
+      font-size: 12px;
+      color: #10B981;
+      font-weight: 500;
+      margin-top: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Custom Role Section */
+    .custom-role-section {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .custom-role-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .custom-role-inputs {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    /* Buttons */
+    .button {
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .button-primary {
+      background: #F68B21;
+      color: white;
+    }
+
+    .button-primary:hover:not(:disabled) {
+      background: #e57a13;
+    }
+
+    .button-secondary {
+      background: white;
+      color: #1F2937;
+      border: 1px solid #d1d5db;
+    }
+
+    .button-secondary:hover:not(:disabled) {
+      background: #f9fafb;
+    }
+
+    .button-full {
+      width: 100%;
+    }
+
+    .button-large {
+      padding: 14px 32px;
+      font-size: 16px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .button-group .button {
+      flex: 1;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      width: 16px;
+      height: 16px;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Summary Section */
+    .submission-summary {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .summary-title {
+      font-weight: 600;
+      color: #166534;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #166534;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6B7280;
+      margin-top: 4px;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 40px;
+      color: #10B981;
+    }
+
+    .modal-title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1F2937;
+      margin-bottom: 8px;
+    }
+
+    .modal-description {
+      text-align: center;
+      font-size: 14px;
+      color: #6B7280;
+      margin-bottom: 24px;
+    }
+
+    .submission-details {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .details-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+      color: #1F2937;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .details-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+
+    .details-label {
+      color: #6B7280;
+    }
+
+    .details-value {
+      color: #1F2937;
+      font-weight: 500;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 20px;
+      color: #6B7280;
+      font-size: 14px;
+    }
+
+    footer p {
+      margin: 8px 0;
+    }
+
+    /* Utility Classes */
+    .hidden {
+      display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .roles-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .custom-role-inputs {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <div class="logo-box">📄</div>
+      <div class="header-text">
+        <h1>Coding Ninjas</h1>
+        <p>Instructor Invoice Portal</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Step 1: Email Verification -->
+    <div id="emailVerificationStep">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            📧 Email Verification
+          </div>
+          <div class="card-description">
+            Enter your registered Coding Ninjas email to get started
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="emailInput">
+            SME Email Address <span class="required">*</span>
+          </label>
+          <input 
+            type="email" 
+            id="emailInput" 
+            placeholder="Enter your registered Coding Ninjas email"
+          >
+          <p class="helper-text">
+            Enter the email address associated with your instructor account
+          </p>
+          <p class="error-text hidden" id="emailError"></p>
+        </div>
+
+        <button class="button button-primary button-full" id="verifyEmailBtn">
+          Verify Email & Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Bulk Invoice Submission -->
+    <div id="bulkInvoiceStep" class="hidden">
+      <!-- Welcome Banner -->
+      <div class="welcome-banner">
+        <div class="welcome-avatar">👤</div>
+        <div class="welcome-text">
+          <h2 id="welcomeName">Welcome!</h2>
+          <p>Submit invoices for all your roles in one go</p>
+        </div>
+      </div>
+
+      <!-- Global Month Selection -->
+      <div class="global-month-section">
+        <h3>📅 Select Invoice Month (applies to all invoices)</h3>
+        <select id="globalMonthSelect">
+          <option value="">Select month</option>
+          <option value="January">January</option>
+          <option value="February">February</option>
+          <option value="March">March</option>
+          <option value="April">April</option>
+          <option value="May">May</option>
+          <option value="June">June</option>
+          <option value="July">July</option>
+          <option value="August">August</option>
+          <option value="September">September</option>
+          <option value="October">October</option>
+          <option value="November">November</option>
+          <option value="December">December</option>
+        </select>
+        <p class="error-text hidden" id="globalMonthError"></p>
+      </div>
+
+      <!-- Predefined Roles Grid -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 Your Assigned Roles</div>
+          <div class="card-description">Upload invoices for each of your assigned roles</div>
+        </div>
+        <div id="rolesGrid" class="roles-grid">
+          <!-- Roles will be dynamically inserted here -->
+        </div>
+        <p id="noRolesMessage" class="helper-text hidden">No predefined roles found. You can add custom roles below.</p>
+      </div>
+
+      <!-- Custom Role Section -->
+      <div class="custom-role-section">
+        <div class="custom-role-header">
+          <h3 style="color: #1F2937; font-size: 16px;">➕ Additional Custom Role</h3>
+          <span class="role-badge predefined">Optional</span>
+        </div>
+        <div class="custom-role-inputs">
+          <div>
+            <label for="customRoleInput">Role Name</label>
+            <input 
+              type="text" 
+              id="customRoleInput" 
+              placeholder="Enter custom role name"
+            >
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <div class="file-upload-zone" id="customRoleUpload">
+              <div class="upload-icon">📁</div>
+              <div class="upload-text">Upload PDF</div>
+              <div class="upload-hint">Max 10MB</div>
+              <div class="file-name-display hidden"></div>
+              <input type="file" accept=".pdf" class="hidden" id="customRoleFile">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submission Summary -->
+      <div id="submissionSummary" class="submission-summary hidden">
+        <div class="summary-title">
+          ✅ Ready to Submit
+        </div>
+        <div class="summary-stats">
+          <div class="stat-item">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Invoices</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statPredefined">0</div>
+            <div class="stat-label">Predefined Roles</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statCustom">0</div>
+            <div class="stat-label">Custom Roles</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="button-group">
+        <button class="button button-secondary" id="backBtn">
+          ← Back
+        </button>
+        <button class="button button-primary button-large" id="submitAllBtn" disabled>
+          Submit All Invoices
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Need help? Contact support@codingninjas.com</p>
+    <p>© 2025 Coding Ninjas. All rights reserved.</p>
+  </footer>
+
+  <!-- Success Modal -->
+  <div id="successModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-icon">✓</div>
+      <h2 class="modal-title">All Invoices Submitted Successfully!</h2>
+      <p class="modal-description">
+        Your invoices have been processed and logged for review
+      </p>
+
+      <div class="submission-details">
+        <div class="details-header">
+          📊 Submission Summary
+        </div>
+        <div class="details-row">
+          <span class="details-label">Month:</span>
+          <span class="details-value" id="summaryMonth"></span>
+        </div>
+        <div class="details-row">
+          <span class="details-label">Total Invoices:</span>
+          <span class="details-value" id="summaryTotal"></span>
+        </div>
+        <div class="details-row">
+          <span class="details-label">Predefined Roles:</span>
+          <span class="details-value" id="summaryPredefined"></span>
+        </div>
+        <div class="details-row">
+          <span class="details-label">Custom Roles:</span>
+          <span class="details-value" id="summaryCustom"></span>
+        </div>
+        <div class="details-row">
+          <span class="details-label">Submitted At:</span>
+          <span class="details-value" id="summaryTimestamp"></span>
+        </div>
+      </div>
+
+      <button class="button button-primary button-full" id="submitMoreBtn" style="margin-bottom: 12px;">
+        Submit More Invoices
+      </button>
+      <button class="button button-secondary button-full" id="finishBtn">
+        Finish
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Global state
+    let currentInstructor = null;
+    let predefinedRoles = [];
+    let fileInputs = new Map();
+
+    // DOM Elements
+    const emailStep = document.getElementById('emailVerificationStep');
+    const bulkStep = document.getElementById('bulkInvoiceStep');
+    const emailInput = document.getElementById('emailInput');
+    const verifyBtn = document.getElementById('verifyEmailBtn');
+    const welcomeName = document.getElementById('welcomeName');
+    const rolesGrid = document.getElementById('rolesGrid');
+    const noRolesMessage = document.getElementById('noRolesMessage');
+    const globalMonthSelect = document.getElementById('globalMonthSelect');
+    const submitAllBtn = document.getElementById('submitAllBtn');
+    const backBtn = document.getElementById('backBtn');
+    const submissionSummary = document.getElementById('submissionSummary');
+    const successModal = document.getElementById('successModal');
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      // Event listeners
+      verifyBtn.addEventListener('click', verifyEmail);
+      backBtn.addEventListener('click', resetToEmailStep);
+      submitAllBtn.addEventListener('click', submitAllInvoices);
+      globalMonthSelect.addEventListener('change', updateSubmissionSummary);
+      
+      // Modal buttons
+      document.getElementById('submitMoreBtn').addEventListener('click', () => {
+        successModal.classList.remove('active');
+        resetForm();
+      });
+      
+      document.getElementById('finishBtn').addEventListener('click', () => {
+        successModal.classList.remove('active');
+        resetToEmailStep();
+      });
+
+      // Initialize file upload for custom role
+      initFileUpload('customRoleUpload', 'customRoleFile');
+    });
+
+    // Email verification - UPDATED FOR CORRECT RESPONSE FORMAT
+    function verifyEmail() {
+      const email = emailInput.value.trim();
+      
+      if (!email) {
+        showError('emailError', 'Please enter your email address');
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showError('emailError', 'Please enter a valid email address');
+        return;
+      }
+
+      setLoading(verifyBtn, true);
+      hideError('emailError');
+
+      // Call Google Apps Script function
+      google.script.run
+        .withSuccessHandler(handleEmailVerificationSuccess)
+        .withFailureHandler(handleEmailVerificationError)
+        .getInstructorData(email);
+    }
+
+    // UPDATED SUCCESS HANDLER - FIXED FOR ACTUAL RESPONSE FORMAT
+    function handleEmailVerificationSuccess(instructorData) {
+      setLoading(verifyBtn, false);
+      console.log("Received data:", instructorData);
+      
+      // Handle error response
+      if (instructorData && instructorData.success === false) {
+        showError('emailError', instructorData.error || 'Email verification failed');
+        return;
+      }
+      
+      // Handle success response - EXTRACT PROJECT NAMES FROM OBJECTS
+      if (instructorData && instructorData.success === true && instructorData.name) {
+        currentInstructor = {
+          email: instructorData.email,
+          name: instructorData.name,
+          projects: instructorData.projects || []
+        };
+        
+        // Extract just the project names from the objects
+        predefinedRoles = currentInstructor.projects.map(project => 
+          typeof project === 'object' ? project.name : project
+        );
+        
+        console.log("Processed roles:", predefinedRoles);
+        showBulkInvoiceStep();
+      } else {
+        showError('emailError', 'Invalid response format from server');
+      }
+    }
+
+    function handleEmailVerificationError(error) {
+      setLoading(verifyBtn, false);
+      showError('emailError', error.toString() || 'Email verification failed');
+    }
+
+    function showBulkInvoiceStep() {
+      emailStep.classList.add('hidden');
+      bulkStep.classList.remove('hidden');
+      welcomeName.textContent = `Welcome, ${currentInstructor.name}!`;
+      
+      renderPredefinedRoles();
+      updateSubmissionSummary();
+    }
+
+    function renderPredefinedRoles() {
+      rolesGrid.innerHTML = '';
+      
+      if (predefinedRoles.length === 0) {
+        noRolesMessage.classList.remove('hidden');
+        return;
+      }
+      
+      noRolesMessage.classList.add('hidden');
+      
+      predefinedRoles.forEach((role, index) => {
+        const roleCard = document.createElement('div');
+        roleCard.className = 'role-card';
+        roleCard.innerHTML = `
+          <div class="role-header">
+            <div class="role-name">${role}</div>
+            <span class="role-badge predefined">Required</span>
+          </div>
+          <div class="file-upload-zone" id="roleUpload-${index}">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Upload PDF Invoice</div>
+            <div class="upload-hint">Max 10MB</div>
+            <div class="file-name-display hidden"></div>
+            <input type="file" accept=".pdf" class="hidden" id="roleFile-${index}">
+          </div>
+        `;
+        rolesGrid.appendChild(roleCard);
+        
+        // Initialize file upload for this role
+        initFileUpload(`roleUpload-${index}`, `roleFile-${index}`, role);
+      });
+    }
+
+    function initFileUpload(uploadZoneId, fileInputId, roleName = null) {
+      const uploadZone = document.getElementById(uploadZoneId);
+      const fileInput = document.getElementById(fileInputId);
+      const fileNameDisplay = uploadZone.querySelector('.file-name-display');
+      
+      // Store reference
+      fileInputs.set(fileInputId, {
+        element: fileInput,
+        roleName: roleName,
+        hasFile: false
+      });
+
+      uploadZone.addEventListener('click', () => fileInput.click());
+      
+      uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragging');
+      });
+      
+      uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragging');
+      });
+      
+      uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragging');
+        if (e.dataTransfer.files.length > 0) {
+          handleFileSelect(e.dataTransfer.files[0], fileInput, fileNameDisplay, uploadZone);
+        }
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFileSelect(e.target.files[0], fileInput, fileNameDisplay, uploadZone);
+        }
+      });
+    }
+
+    function handleFileSelect(file, fileInput, fileNameDisplay, uploadZone) {
+      if (file.type !== 'application/pdf') {
+        showUploadError(uploadZone, 'Please select a PDF file only');
+        return;
+      }
+      
+      if (file.size > 10 * 1024 * 1024) {
+        showUploadError(uploadZone, 'File size must be less than 10MB');
+        return;
+      }
+      
+      // Success
+      uploadZone.classList.remove('error');
+      uploadZone.classList.add('has-file');
+      fileNameDisplay.textContent = file.name;
+      fileNameDisplay.classList.remove('hidden');
+      
+      // Update file input state
+      const fileInputId = fileInput.id;
+      if (fileInputs.has(fileInputId)) {
+        fileInputs.get(fileInputId).hasFile = true;
+        fileInputs.get(fileInputId).file = file;
+      }
+      
+      updateSubmissionSummary();
+    }
+
+    function showUploadError(uploadZone, message) {
+      uploadZone.classList.add('error');
+      const errorText = uploadZone.querySelector('.error-text') || document.createElement('div');
+      errorText.className = 'error-text';
+      errorText.textContent = message;
+      if (!uploadZone.querySelector('.error-text')) {
+        uploadZone.appendChild(errorText);
+      }
+    }
+
+    function updateSubmissionSummary() {
+      const monthSelected = globalMonthSelect.value !== '';
+      
+      // Count predefined roles with files
+      let predefinedWithFiles = 0;
+      fileInputs.forEach((value, key) => {
+        if (key.startsWith('roleFile-') && value.hasFile) {
+          predefinedWithFiles++;
+        }
+      });
+      
+      // Check custom role
+      const customRoleInput = document.getElementById('customRoleInput');
+      const customRoleFile = fileInputs.get('customRoleFile');
+      const hasCustomRole = customRoleInput.value.trim() !== '' && customRoleFile && customRoleFile.hasFile;
+      
+      const totalInvoices = predefinedWithFiles + (hasCustomRole ? 1 : 0);
+      const canSubmit = monthSelected && totalInvoices > 0;
+      
+      // Update summary
+      document.getElementById('statTotal').textContent = totalInvoices;
+      document.getElementById('statPredefined').textContent = predefinedWithFiles;
+      document.getElementById('statCustom').textContent = hasCustomRole ? 1 : 0;
+      
+      // Show/hide summary
+      if (totalInvoices > 0) {
+        submissionSummary.classList.remove('hidden');
+      } else {
+        submissionSummary.classList.add('hidden');
+      }
+      
+      // Enable/disable submit button
+      submitAllBtn.disabled = !canSubmit;
+    }
+
+    function submitAllInvoices() {
+      const month = globalMonthSelect.value;
+      const invoices = [];
+      
+      // Collect predefined role invoices
+      fileInputs.forEach((value, key) => {
+        if (key.startsWith('roleFile-') && value.hasFile && value.file) {
+          invoices.push({
+            projectRole: value.roleName,
+            file: value.file,
+            type: 'predefined'
+          });
+        }
+      });
+      
+      // Collect custom role invoice
+      const customRoleInput = document.getElementById('customRoleInput');
+      const customRoleFile = fileInputs.get('customRoleFile');
+      if (customRoleInput.value.trim() !== '' && customRoleFile && customRoleFile.hasFile && customRoleFile.file) {
+        invoices.push({
+          projectRole: customRoleInput.value.trim(),
+          file: customRoleFile.file,
+          type: 'custom'
+        });
+      }
+      
+      if (invoices.length === 0) {
+        alert('Please upload at least one invoice');
+        return;
+      }
+
+      setLoading(submitAllBtn, true);
+
+      const formData = {
+        smeEmail: currentInstructor.email,
+        smeName: currentInstructor.name,
+        month: month,
+        invoices: invoices
+      };
+
+      google.script.run
+        .withSuccessHandler(handleSubmissionSuccess)
+        .withFailureHandler(handleSubmissionError)
+        .processFormSubmission(formData);
+    }
+
+    function handleSubmissionSuccess(result) {
+      setLoading(submitAllBtn, false);
+      
+      if (result && result.success) {
+        showSuccessModal(result);
+      } else {
+        handleSubmissionError(result?.error || 'Submission failed');
+      }
+    }
+
+    function handleSubmissionError(error) {
+      setLoading(submitAllBtn, false);
+      alert('Error submitting invoices: ' + error);
+    }
+
+    function showSuccessModal(result) {
+      const month = globalMonthSelect.value;
+      const total = result.details ? result.details.length : 0;
+      const predefined = result.details ? result.details.filter(d => d.type === 'predefined').length : 0;
+      const custom = result.details ? result.details.filter(d => d.type === 'custom').length : 0;
+      
+      document.getElementById('summaryMonth').textContent = month;
+      document.getElementById('summaryTotal').textContent = total;
+      document.getElementById('summaryPredefined').textContent = predefined;
+      document.getElementById('summaryCustom').textContent = custom;
+      document.getElementById('summaryTimestamp').textContent = new Date().toLocaleString();
+      
+      successModal.classList.add('active');
+    }
+
+    function resetToEmailStep() {
+      bulkStep.classList.add('hidden');
+      emailStep.classList.remove('hidden');
+      emailInput.value = '';
+      currentInstructor = null;
+      predefinedRoles = [];
+      fileInputs.clear();
+      hideError('emailError');
+    }
+
+    function resetForm() {
+      // Reset all file inputs
+      fileInputs.forEach((value, key) => {
+        value.hasFile = false;
+        value.file = null;
+        const fileInput = document.getElementById(key);
+        if (fileInput) fileInput.value = '';
+        
+        const uploadZone = document.querySelector(`[id^="roleUpload-"], #customRoleUpload`);
+        if (uploadZone) {
+          uploadZone.classList.remove('has-file', 'error');
+          const fileNameDisplay = uploadZone.querySelector('.file-name-display');
+          if (fileNameDisplay) {
+            fileNameDisplay.classList.add('hidden');
+          }
+        }
+      });
+      
+      // Reset custom role input
+      document.getElementById('customRoleInput').value = '';
+      
+      updateSubmissionSummary();
+    }
+
+    // Utility functions
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function showError(elementId, message) {
+      const element = document.getElementById(elementId);
+      element.textContent = message;
+      element.classList.remove('hidden');
+    }
+
+    function hideError(elementId) {
+      const element = document.getElementById(elementId);
+      element.classList.add('hidden');
+    }
+
+    function setLoading(button, loading) {
+      button.disabled = loading;
+      const originalText = button.textContent;
+      if (loading) {
+        button.innerHTML = '<div class="spinner"></div> Processing...';
+      } else {
+        button.textContent = originalText.replace('<div class="spinner"></div> Processing...', '').trim();
+      }
+    }
+</script>
+</body>
+</html>
