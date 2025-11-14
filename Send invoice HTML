@@ -1,0 +1,118 @@
+<!-- ===== MonthPicker.html ===== -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Roboto, Arial, sans-serif; padding: 14px; }
+      label { display:block; margin-bottom:6px; font-weight:600; }
+      select, button { font-size:13px; padding:8px 10px; }
+      .muted { color:#666; font-size:12px; margin-top:8px; }
+      #status { margin-top:12px; font-size:13px; }
+    </style>
+  </head>
+  <body>
+    <label for="monthSelect">Choose Month & Year</label>
+    <select id="monthSelect"></select>
+
+    <div style="margin-top:12px;">
+      <button id="countBtn">Show count</button>
+      <button id="sendBtn" style="margin-left:8px;">Send emails</button>
+      <button id="cancelBtn" style="margin-left:8px;">Close</button>
+    </div>
+
+    <div id="status" class="muted"></div>
+
+    <script>
+      (function init(){
+        document.getElementById('status').innerText = "Loading months…";
+        google.script.run.withSuccessHandler(populateMonths).withFailureHandler(showError).getUniqueMonths();
+        document.getElementById('countBtn').addEventListener('click', showCount);
+        document.getElementById('sendBtn').addEventListener('click', confirmAndSend);
+        document.getElementById('cancelBtn').addEventListener('click', closeDialog);
+      })();
+
+      function populateMonths(months) {
+        const sel = document.getElementById('monthSelect');
+        sel.innerHTML = "";
+        if (!months || months.length === 0) {
+          sel.innerHTML = '<option value="">(no months found)</option>';
+          document.getElementById('status').innerText = "No Month & Year values found in the sheet.";
+          return;
+        }
+        months.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.text = m;
+          sel.appendChild(opt);
+        });
+        document.getElementById('status').innerText = `Loaded ${months.length} month(s). Select and click "Show count".`;
+      }
+
+      function showError(err) {
+        document.getElementById('status').innerText = "Error loading months: " + (err && err.message ? err.message : err);
+      }
+
+      function showCount() {
+        const sel = document.getElementById('monthSelect');
+        const val = sel.value;
+        if (!val) {
+          document.getElementById('status').innerText = "Please select a month first.";
+          return;
+        }
+        document.getElementById('status').innerText = "Counting unsent rows...";
+        google.script.run.withSuccessHandler(function(res){
+          if (res && res.error) {
+            document.getElementById('status').innerText = "Error: " + res.error;
+          } else {
+            document.getElementById('status').innerText = `Found ${res.count} unsent row(s) for "${val}". Click "Send emails" to proceed.`;
+          }
+        }).withFailureHandler(function(e){
+          document.getElementById('status').innerText = "Error: " + (e && e.message ? e.message : e);
+        }).countUnsentForMonth(val);
+      }
+
+      function confirmAndSend() {
+        const sel = document.getElementById('monthSelect');
+        const val = sel.value;
+        if (!val) {
+          document.getElementById('status').innerText = "Please select a month first.";
+          return;
+        }
+        // double-check count before sending
+        document.getElementById('status').innerText = "Preparing to send…";
+        google.script.run.withSuccessHandler(function(res){
+          if (res && res.error) {
+            document.getElementById('status').innerText = "Error: " + res.error;
+            return;
+          }
+          const cnt = res.count || 0;
+          const ok = confirm(`About to send ${cnt} email(s) for "${val}". Continue?`);
+          if (!ok) {
+            document.getElementById('status').innerText = "Sending cancelled by user.";
+            return;
+          }
+          // proceed to send
+          document.getElementById('status').innerText = "Sending emails… please wait.";
+          google.script.run.withSuccessHandler(function(summary){
+            if (summary && summary.errors && summary.errors.length > 0) {
+              document.getElementById('status').innerText = `Done. Sent: ${summary.sent}, Failed: ${summary.failed}. Check sheet status column for details. Errors: ${summary.errors.slice(0,5).join("; ")}`;
+            } else {
+              document.getElementById('status').innerText = `Done. Sent: ${summary.sent}, Failed: ${summary.failed}.`;
+            }
+            // optionally close after short delay
+            setTimeout(closeDialog, 1800);
+          }).withFailureHandler(function(e){
+            document.getElementById('status').innerText = "Send failed: " + (e && e.message ? e.message : e);
+          }).sendInvoicesForMonth(val);
+        }).withFailureHandler(function(e){
+          document.getElementById('status').innerText = "Error counting rows: " + (e && e.message ? e.message : e);
+        }).countUnsentForMonth(val);
+      }
+
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
