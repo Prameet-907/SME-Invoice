@@ -1,0 +1,127 @@
+// --- CONFIGURATION ---
+const SPREADSHEET_ID = "1_1tlqa3ijeIpsbULs32yJYH1sZDOYTUnX2lOYBUzjX8";
+const INSTRUCTOR_DATA_SHEET_NAME = "InstructorData";
+const INVOICE_LOG_SHEET_NAME = "InvoiceLog";
+const DRIVE_ROOT_FOLDER_ID = "1P8q6hEo-o7W5jjOcZziIEMpRyM6wUhm3";
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+}
+
+// Simplified column mapping - only what we need
+const LOG_COLUMNS = {
+  DATE: 0,        // A: Submission Date
+  EMAIL: 1,       // B: SME Email  
+  MONTH: 2,       // C: Month Year
+  NAME: 3,        // D: SME Name
+  ROLE: 4,        // E: Role/Project
+  FILE_URL: 5     // F: Invoice URL
+};
+
+/**
+ * SIMPLIFIED SUBMISSION FUNCTION
+ */
+function processFormSubmission(formData) {
+  try {
+    Logger.log("=== STARTING SIMPLIFIED SUBMISSION ===");
+    
+    // Extract data
+    const smeEmail = formData.smeEmail.trim();
+    const smeName = formData.smeName.trim();
+    const monthYear = formData.month; // Format: "October 2025"
+    const projectRole = formData.projectRole.trim();
+    const fileData = formData.file;
+    
+    Logger.log(`Processing: ${smeName} - ${projectRole} - ${monthYear}`);
+    
+    // Basic validation
+    if (!smeEmail || !smeName || !monthYear || !projectRole || !fileData) {
+      throw new Error("All fields are required");
+    }
+    
+    // File type validation
+    const contentType = fileData.contentType;
+    if (!contentType.includes('pdf') && !contentType.includes('msword') && !contentType.includes('wordprocessingml')) {
+      throw new Error("Only PDF and Word documents are allowed");
+    }
+
+    // --- FOLDER MANAGEMENT ---
+    const rootFolder = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+    
+    // Create folder name: "Invoices | October 2025"
+    const folderName = `Invoices | ${monthYear}`;
+    
+    let monthFolder;
+    const monthFolders = rootFolder.getFoldersByName(folderName);
+    
+    if (monthFolders.hasNext()) {
+      monthFolder = monthFolders.next();
+      Logger.log("Found existing folder: " + folderName);
+    } else {
+      monthFolder = rootFolder.createFolder(folderName);
+      Logger.log("Created new folder: " + folderName);
+    }
+
+    // --- FILE NAMING & SAVING ---
+    // Format: "DS Consultant_Invoice_October'25_Vipin"
+    const safeRole = projectRole.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+    const safeName = smeName.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+    
+    // Convert "October 2025" to "October'25"
+    const monthAbbrev = monthYear.replace(' ', "'");
+    const fileName = `${safeRole}_Invoice_${monthAbbrev}_${safeName}`;
+    
+    Logger.log("Creating file: " + fileName);
+    
+    // Save file
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(fileData.data), 
+      contentType, 
+      fileName
+    );
+    const savedFile = monthFolder.createFile(blob);
+    const fileUrl = savedFile.getUrl();
+    
+    Logger.log("File saved successfully: " + fileUrl);
+
+    // --- UPDATE INVOICE LOG ---
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const logSheet = ss.getSheetByName(INVOICE_LOG_SHEET_NAME);
+    
+    const newRow = [
+      new Date(),                     // Submission Date
+      smeEmail,                      // SME Email
+      monthYear,                     // Month Year
+      smeName,                       // SME Name  
+      projectRole,                   // Role/Project
+      fileUrl                        // Invoice URL
+    ];
+    
+    logSheet.appendRow(newRow);
+    Logger.log("Invoice logged successfully");
+    
+    return { 
+      success: true, 
+      message: "Invoice submitted successfully!",
+      fileName: fileName,
+      fileUrl: fileUrl
+    };
+    
+  } catch (error) {
+    Logger.log("SUBMISSION ERROR: " + error.toString());
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+}
+
+/**
+ * Keep existing getInstructorData - it's working fine
+ */
+function getInstructorData(email) {
+  // Your existing working function
+  // No changes needed here
+}
