@@ -1,0 +1,371 @@
+// --- CONFIGURATION ---
+const SPREADSHEET_ID = "1_1tlqa3ijeIpsbULs32yJYH1sZDOYTUnX2lOYBUzjX8";
+const INSTRUCTOR_DATA_SHEET_NAME = "InstructorData";
+const INVOICE_LOG_SHEET_NAME = "InvoiceLog";
+const DRIVE_ROOT_FOLDER_ID = "1P8q6hEo-o7W5jjOcZziIEMpRyM6wUhm3";
+
+// Define the column indices for the InvoiceLog (0-indexed)
+const LOG_COLUMN_MAP = {
+  SUBMISSION_DATE: 0,   // A: Submission Date
+  SME_EMAIL: 1,         // B: SME Email
+  MONTH_YEAR: 2,        // C: Month and Year
+  SME_NAME: 3,          // D: SME Name
+  ROLE_PROJECT: 4,      // E: Role/ Project
+  EFFORT_URL: 5,        // F: Effort tracker URL
+  INVOICE_AMOUNT: 6,    // G: Invoice amount
+  PERIOD: 7,            // H: period
+  INVOICE_LAST_DATE: 8, // I: invoice last date
+  INVOICE_NUMBER: 9,    // J: invoice number
+  INVOICE_DATED: 10,    // K: invoice dated
+  INVOICE_URL: 11       // L: Invoice URL
+};
+
+/**
+ * Serves the HTML file for the web app.
+ */
+function doGet() {
+  Logger.log("Web App accessed.");
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+}
+
+/**
+ * Looks up instructor details and roles based on email.
+ */
+function getInstructorData(email) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(INSTRUCTOR_DATA_SHEET_NAME);
+  
+  if (!sheet) {
+    Logger.log(`Error: Sheet '${INSTRUCTOR_DATA_SHEET_NAME}' not found.`);
+    return { success: false, error: `Lookup sheet not found.` };
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim());
+  
+  const emailIndex = headers.indexOf("SME Email");
+  const nameIndex = headers.indexOf("SME Name");
+  const roleIndex = headers.indexOf("Role/ Project");
+  const invoiceNumberIndex = headers.indexOf("Invoice Number");
+  const invoiceAmountIndex = headers.indexOf("Invoice Amount");
+
+  if (emailIndex === -1 || nameIndex === -1 || roleIndex === -1) {
+    return { success: false, error: "Required headers missing in InstructorData sheet." };
+  }
+  
+  const rows = data.slice(1);
+  const instructorDetails = {
+    success: true,
+    email: email,
+    name: null,
+    projects: []
+  };
+  
+  const targetEmail = String(email).trim().toLowerCase();
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rowEmail = String(row[emailIndex]).trim().toLowerCase();
+    
+    if (rowEmail === targetEmail) {
+      const smeName = row[nameIndex];
+      const roleProject = row[roleIndex];
+      const invoiceNumber = invoiceNumberIndex !== -1 ? row[invoiceNumberIndex] : "";
+      const invoiceAmount = invoiceAmountIndex !== -1 ? row[invoiceAmountIndex] : "";
+      
+      if (!instructorDetails.name) {
+        instructorDetails.name = smeName;
+      }
+      
+      if (roleProject) {
+        instructorDetails.projects.push({
+          name: roleProject,
+          invoiceNumber: invoiceNumber,
+          invoiceAmount: invoiceAmount
+        });
+      }
+    }
+  }
+
+  if (instructorDetails.projects.length === 0) {
+    return { success: false, error: "Email not found or no active projects." };
+  }
+  
+  Logger.log(`Found data for ${email}: ${instructorDetails.projects.length} roles`);
+  return instructorDetails;
+}
+
+/**
+ * Handles bulk form submission with multiple invoices
+ */
+function processFormSubmission(formData) {
+  try {
+    Logger.log("=== STARTING BULK SUBMISSION ===");
+    
+    const smeEmail = formData.smeEmail ? formData.smeEmail.trim() : '';
+    const smeName = formData.smeName ? formData.smeName.trim() : '';
+    const month = formData.month ? formData.month.trim() : '';
+    const invoices = formData.invoices || [];
+    
+    Logger.log("Processing for: " + smeEmail);
+    Logger.log("Month: " + month);
+    Logger.log("Invoices count: " + invoices.length);
+
+    if (!smeEmail || !smeName || !month) {
+      throw new Error("Missing required form data (email, name, or month).");
+    }
+
+    if (invoices.length === 0) {
+      throw new Error("No invoices to process.");
+    }
+
+    // Get master data for invoice number/amount matching
+    const masterData = getMasterDataForEmail(smeEmail);
+    Logger.log("Master data records: " + masterData.length);
+
+    // Process each invoice
+    const results = [];
+    for (let i = 0; i < invoices.length; i++) {
+      const invoice = invoices[i];
+      Logger.log(`Processing invoice ${i + 1}/${invoices.length}`);
+      
+      if (!invoice) {
+        Logger.log("Invoice is undefined, skipping");
+        results.push({ success: false, error: "Invoice data is undefined" });
+        continue;
+      }
+      
+      try {
+        const result = processSingleInvoice(invoice, smeEmail, smeName, month, masterData);
+        results.push(result);
+        Logger.log(`Invoice ${i + 1} processed successfully`);
+      } catch (e) {
+        Logger.log(`Error processing invoice ${i + 1}: ${e.toString()}`);
+        results.push({ 
+          success: false, 
+          error: e.message, 
+          projectRole: invoice.projectRole || 'Unknown role'
+        });
+      }
+    }
+
+    // Check results
+    const successfulInvoices = results.filter(r => r.success);
+    const failedInvoices = results.filter(r => !r.success);
+    
+    Logger.log(`Results: ${successfulInvoices.length} successful, ${failedInvoices.length} failed`);
+
+    if (failedInvoices.length > 0) {
+      return { 
+        success: false, 
+        error: `${failedInvoices.length} invoices failed to process`,
+        details: results
+      };
+    }
+
+    return { 
+      success: true, 
+      message: `Successfully submitted ${successfulInvoices.length} invoices`,
+      details: results
+    };
+    
+  } catch (e) {
+    Logger.log("Error during bulk form submission: " + e.toString());
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Process a single invoice - CLEAN VERSION
+ */
+function processSingleInvoice(invoice, smeEmail, smeName, month, masterData) {
+  // Validate invoice object
+  if (!invoice || typeof invoice !== 'object') {
+    throw new Error("Invalid invoice data");
+  }
+  
+  const projectRole = invoice.projectRole ? invoice.projectRole.trim() : '';
+  const fileData = invoice.file;
+  
+  Logger.log("Processing invoice for role: " + projectRole);
+  
+  if (!projectRole) {
+    throw new Error("Project role is required");
+  }
+  
+  if (!fileData) {
+    throw new Error("File data is required");
+  }
+
+  // --- Folder Management ---
+  const rootFolder = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+  
+  // Create folder name: "Invoices | Nov'25" format
+  const monthYearParts = month.split(' ');
+  const monthName = monthYearParts[0];
+  const year = monthYearParts[1];
+  const monthAbbrev = monthName.substring(0, 3);
+  const folderName = `Invoices | ${monthAbbrev}'${year.substring(2)}`;
+  
+  let monthFolder;
+  const monthFolders = rootFolder.getFoldersByName(folderName);
+  if (monthFolders.hasNext()) {
+    monthFolder = monthFolders.next();
+  } else {
+    monthFolder = rootFolder.createFolder(folderName);
+    Logger.log("Created folder: " + folderName);
+  }
+
+  // --- File Naming ---
+  const safeRole = projectRole.replace(/[^\w\s]/g, '').replace(/\s+/g, '');
+  const safeSmeName = smeName.replace(/[^\w\s]/g, '').replace(/\s+/g, '');
+  const fileName = `${safeRole}_Invoice_${monthAbbrev}'${year.substring(2)}_${safeSmeName}.pdf`;
+
+  Logger.log("Creating file: " + fileName);
+
+  // --- File Creation ---
+let pdfFile;
+
+if (fileData.data && fileData.contentType) {
+  // Handle base64 data from HTML form
+  Logger.log("Processing base64 file data");
+  const pdfBlob = Utilities.newBlob(Utilities.base64Decode(fileData.data), 'application/pdf', fileName);
+  pdfFile = monthFolder.createFile(pdfBlob);
+} else {
+  // Fallback - create empty file if data is missing
+  Logger.log("Creating empty PDF file");
+  const pdfContent = "%PDF-1.4\n%Created by Coding Ninjas Invoice System";
+  pdfFile = monthFolder.createFile(fileName, pdfContent, MimeType.PDF);
+}
+  
+  pdfFile.setName(fileName);
+  const fileUrl = pdfFile.getUrl();
+  Logger.log("File created successfully: " + fileUrl);
+
+  // --- Get Invoice Data from Master Sheet ---
+  const invoiceData = findInvoiceDataInMaster(smeEmail, projectRole, masterData);
+  
+  // --- Update Invoice Log ---
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const logSheet = ss.getSheetByName(INVOICE_LOG_SHEET_NAME);
+  
+  const newRow = new Array(12).fill('');
+  newRow[LOG_COLUMN_MAP.SUBMISSION_DATE] = new Date();
+  newRow[LOG_COLUMN_MAP.SME_EMAIL] = smeEmail;
+  newRow[LOG_COLUMN_MAP.MONTH_YEAR] = month;
+  newRow[LOG_COLUMN_MAP.SME_NAME] = smeName;
+  newRow[LOG_COLUMN_MAP.ROLE_PROJECT] = projectRole;
+  newRow[LOG_COLUMN_MAP.EFFORT_URL] = "";
+  newRow[LOG_COLUMN_MAP.INVOICE_AMOUNT] = invoiceData.invoiceAmount || "";
+  newRow[LOG_COLUMN_MAP.PERIOD] = "";
+  newRow[LOG_COLUMN_MAP.INVOICE_LAST_DATE] = "";
+  newRow[LOG_COLUMN_MAP.INVOICE_NUMBER] = invoiceData.invoiceNumber || "";
+  newRow[LOG_COLUMN_MAP.INVOICE_DATED] = "";
+  newRow[LOG_COLUMN_MAP.INVOICE_URL] = fileUrl;
+
+  logSheet.appendRow(newRow);
+  Logger.log("Row added to invoice log");
+  
+  return { 
+    success: true, 
+    fileName: fileName,
+    projectRole: projectRole,
+    type: invoice.type || 'predefined'
+  };
+}
+
+/**
+ * Get master data for a specific email to match invoice numbers/amounts
+ */
+function getMasterDataForEmail(email) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(INSTRUCTOR_DATA_SHEET_NAME);
+  
+  if (!sheet) {
+    throw new Error("InstructorData sheet not found");
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim());
+  
+  const emailIndex = headers.indexOf("SME Email");
+  const roleIndex = headers.indexOf("Role/ Project");
+  const invoiceNumberIndex = headers.indexOf("Invoice Number");
+  const invoiceAmountIndex = headers.indexOf("Invoice Amount");
+  
+  const rows = data.slice(1);
+  const targetEmail = String(email).trim().toLowerCase();
+  const masterData = [];
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rowEmail = String(row[emailIndex]).trim().toLowerCase();
+    
+    if (rowEmail === targetEmail) {
+      masterData.push({
+        role: row[roleIndex],
+        invoiceNumber: invoiceNumberIndex !== -1 ? row[invoiceNumberIndex] : "",
+        invoiceAmount: invoiceAmountIndex !== -1 ? row[invoiceAmountIndex] : ""
+      });
+    }
+  }
+  
+  return masterData;
+}
+
+/**
+ * Find invoice data in master records using email + role
+ */
+function findInvoiceDataInMaster(email, role, masterData) {
+  Logger.log("Finding master data for role: " + role);
+  
+  // First try exact match
+  const exactMatch = masterData.find(item => 
+    item.role && String(item.role).trim().toLowerCase() === role.toLowerCase()
+  );
+  
+  if (exactMatch) {
+    Logger.log("Found exact match");
+    return {
+      invoiceNumber: exactMatch.invoiceNumber,
+      invoiceAmount: exactMatch.invoiceAmount
+    };
+  }
+  
+  // If no exact match, try partial match
+  const partialMatch = masterData.find(item =>
+    item.role && String(item.role).trim().toLowerCase().includes(role.toLowerCase()) ||
+    role.toLowerCase().includes(String(item.role).trim().toLowerCase())
+  );
+  
+  if (partialMatch) {
+    Logger.log("Found partial match");
+    return {
+      invoiceNumber: partialMatch.invoiceNumber,
+      invoiceAmount: partialMatch.invoiceAmount
+    };
+  }
+  
+  // Return empty if no match found
+  Logger.log(`No master data found for ${email} - ${role}`);
+  return {
+    invoiceNumber: "",
+    invoiceAmount: ""
+  };
+}
+
+/**
+ * Simple test function
+ */
+function testConnection() {
+  return { success: true, message: "Connection successful" };
+}
+
+/**
+ * Include HTML file for web app
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
